@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workspace | Validateur DGI</title>
+    <style>
+        :root{--bg:#f8fafc;--card:#fff;--line:#e2e8f0;--muted:#64748b;--primary:#4f46e5;--primary-weak:#eef2ff;--success:#059669;--danger:#e11d48;--warning:#d97706}
+        *{box-sizing:border-box}
+        body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);margin:0;padding:24px;color:#0f172a}
+        .shell{max-width:1480px;margin:0 auto}
+        .hero{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:20px}
+        .hero h1{margin:0;font-size:30px;line-height:1.1}
+        .hero p{margin:8px 0 0;color:var(--muted)}
+        .links a{color:var(--primary);text-decoration:none;font-weight:700;margin-left:12px}
+        .grid{display:grid;grid-template-columns:1.2fr .9fr;gap:18px;align-items:start}
+        .stack{display:grid;gap:18px}
+        .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 10px 20px rgba(15,23,42,.05)}
+        .card h2{margin:0 0 12px;font-size:18px}
+        .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--primary-weak);color:var(--primary);font-size:12px;font-weight:700}
+        label{display:block;font-size:13px;font-weight:700;color:#334155;margin:12px 0 6px}
+        input,select,textarea{width:100%;padding:11px 12px;border:1px solid #cbd5e1;border-radius:11px;box-sizing:border-box;background:#fff}
+        textarea{min-height:110px;resize:vertical}
+        table{width:100%;border-collapse:collapse;margin-top:10px}
+        th,td{border-bottom:1px solid var(--line);padding:9px 8px;font-size:13px;text-align:left;vertical-align:top}
+        th{background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+        .button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:11px;background:var(--primary);color:#fff;text-decoration:none;font-weight:700;border:0;cursor:pointer}
+        .secondary{background:#e2e8f0;color:#0f172a}
+        .muted{color:var(--muted);font-size:13px}
+        .status{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700}
+        .ok{background:#dcfce7;color:var(--success)}
+        .bad{background:#fee2e2;color:var(--danger)}
+        .warn{background:#fef3c7;color:var(--warning)}
+        .cols-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+        .cols-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+        .cols-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+        .line-card{padding:14px;border:1px solid var(--line);border-radius:14px;background:#fff}
+        .line-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+        .line-title strong{font-size:14px}
+        .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+        .panel{background:linear-gradient(180deg,#fff,#fafafa)}
+        .audit-list{display:grid;gap:10px;margin-top:12px}
+        .audit-row{padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff}
+        .audit-row .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+        .audit-row .message{margin-top:6px;color:#334155;font-size:13px;line-height:1.5}
+        .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+        .kpi{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px}
+        .kpi span{display:block;color:var(--muted);font-size:12px}
+        .kpi strong{display:block;margin-top:6px;font-size:24px}
+        @media (max-width: 1100px){.grid{grid-template-columns:1fr}.kpis,.cols-2,.cols-3,.cols-4{grid-template-columns:1fr 1fr}}
+        @media (max-width: 720px){body{padding:16px}.hero{flex-direction:column;align-items:flex-start}.kpis,.cols-2,.cols-3,.cols-4{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div class="shell">
+    <div class="hero">
+        <div>
+            <span class="eyebrow">Workspace fiscal · SSR</span>
+            <h1>Analyser, corriger et régénérer une facture</h1>
+            <p>Importez un document, laissez Spring AI structurer les données, puis corrigez les champs et les lignes avant de sauvegarder.</p>
+        </div>
+        <div class="links">
+            <a th:href="@{/dashboard}">Dashboard</a>
+            <a th:href="@{/invoices}">Registre</a>
+            <a th:href="@{/profile}">Profil</a>
+        </div>
+    </div>
+
+    <div class="kpis" th:if="${invoice != null}">
+        <div class="kpi"><span>Numéro</span><strong th:text="${invoice.invoiceNumber} ?: '—'"></strong></div>
+        <div class="kpi"><span>Total HT</span><strong th:text="${invoice.totalHt} ?: '0.00'"></strong></div>
+        <div class="kpi"><span>Total TVA</span><strong th:text="${invoice.totalTva} ?: '0.00'"></strong></div>
+        <div class="kpi"><span>Total TTC</span><strong th:text="${invoice.totalTtc} ?: '0.00'"></strong></div>
+    </div>
+
+    <div class="grid">
+        <div class="stack">
+            <div class="card panel">
+                <h2>1. Import du document</h2>
+                <p class="muted">Formats acceptés : .docx, .xlsx, .pdf. Le texte brut est extrait par le backend, puis structuré par Spring AI avec secours regex.</p>
+                <form th:action="@{/workspace/upload}" method="post" enctype="multipart/form-data">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <label for="file">Fichier à auditer</label>
+                    <input id="file" name="file" type="file" accept=".docx,.xlsx,.pdf" required />
+                    <div class="actions">
+                        <button class="button" type="submit">Analyser avec IA</button>
+                        <a class="button secondary" th:href="@{/dashboard}">Retour dashboard</a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>2. Correction de la facture</h2>
+                <p class="muted">Les champs ci-dessous restent éditables avant sauvegarde. Les lignes d’articles suivent un binding indexé sur `invoice.items`.</p>
+                <form th:action="@{/workspace/save}" method="post" th:object="${invoice}">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+                    <div class="cols-2">
+                        <div>
+                            <label>Numéro de facture</label>
+                            <input th:field="*{invoiceNumber}" />
+                        </div>
+                        <div>
+                            <label>Méthode de règlement</label>
+                            <select th:field="*{paymentMethod}">
+                                <option th:value="CASH">Espèces</option>
+                                <option th:value="TRANSFER">Virement</option>
+                                <option th:value="CHEQUE">Chèque</option>
+                                <option th:value="BILL_OF_EXCHANGE">Effet</option>
+                                <option th:value="OTHER">Autre</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="cols-2">
+                        <div>
+                            <label>Émetteur</label>
+                            <input th:field="*{issuer.name}" />
+                        </div>
+                        <div>
+                            <label>Adresse émetteur</label>
+                            <input th:field="*{issuer.address}" />
+                        </div>
+                    </div>
+
+                    <div class="cols-4">
+                        <div><label>ICE émetteur</label><input th:field="*{issuer.ice}" /></div>
+                        <div><label>IF émetteur</label><input th:field="*{issuer.ifNumber}" /></div>
+                        <div><label>RC</label><input th:field="*{issuer.rc}" /></div>
+                        <div><label>Patente</label><input th:field="*{issuer.patente}" /></div>
+                    </div>
+
+                    <div class="cols-2">
+                        <div>
+                            <label>Client</label>
+                            <input th:field="*{client.name}" />
+                        </div>
+                        <div>
+                            <label>Adresse client</label>
+                            <input th:field="*{client.address}" />
+                        </div>
+                    </div>
+
+                    <div class="cols-2">
+                        <div><label>ICE client</label><input th:field="*{client.ice}" /></div>
+                        <div><label>Date d'émission</label><input type="date" th:field="*{issueDate}" /></div>
+                    </div>
+
+                    <div class="cols-2">
+                        <div><label>Total HT</label><input th:field="*{totalHt}" /></div>
+                        <div><label>Total TVA</label><input th:field="*{totalTva}" /></div>
+                    </div>
+                    <div class="cols-2">
+                        <div><label>Droit de timbre</label><input th:field="*{stampDuty}" /></div>
+                        <div><label>Total TTC</label><input th:field="*{totalTtc}" /></div>
+                    </div>
+
+                    <div style="margin-top:18px">
+                        <div class="line-title">
+                            <strong>Lignes de facture</strong>
+                            <span class="muted">3 lignes préchargées pour édition</span>
+                        </div>
+                        <div class="audit-list">
+                            <div class="line-card" th:each="line, stat : *{items}">
+                                <div class="line-title">
+                                    <strong th:text="'Ligne ' + ${stat.index + 1}"></strong>
+                                    <span class="muted">ID logique: <span th:text="${stat.index + 1}"></span></span>
+                                </div>
+                                <input type="hidden" th:field="*{items[__${stat.index}__].lineNumber}" th:value="${stat.index + 1}" />
+                                <div class="cols-2">
+                                    <div>
+                                        <label>Désignation</label>
+                                        <input th:field="*{items[__${stat.index}__].description}" />
+                                    </div>
+                                    <div>
+                                        <label>Clause d’exonération CGI</label>
+                                        <input th:field="*{items[__${stat.index}__].cgiExemptionClause}" />
+                                    </div>
+                                </div>
+                                <div class="cols-4">
+                                    <div><label>Qté</label><input th:field="*{items[__${stat.index}__].quantity}" /></div>
+                                    <div><label>PU HT</label><input th:field="*{items[__${stat.index}__].unitPriceHt}" /></div>
+                                    <div><label>Remise</label><input th:field="*{items[__${stat.index}__].discountAmount}" /></div>
+                                    <div><label>Taux TVA</label><input th:field="*{items[__${stat.index}__].vatRate}" /></div>
+                                </div>
+                                <div class="cols-3">
+                                    <div><label>Total HT ligne</label><input th:field="*{items[__${stat.index}__].totalLineHt}" /></div>
+                                    <div><label>Total TVA ligne</label><input th:field="*{items[__${stat.index}__].totalLineTva}" /></div>
+                                    <div><label>Total TTC ligne</label><input th:field="*{items[__${stat.index}__].totalLineTtc}" /></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <button class="button" type="submit">Sauvegarder et générer le PDF</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="stack">
+            <div class="card">
+                <h2>3. Rapport d’audit</h2>
+                <p th:if="${auditReport == null}">Aucun audit exécuté pour l’instant.</p>
+                <div th:if="${auditReport != null}">
+                    <div class="status" th:classappend="${auditReport.compliant} ? 'ok' : 'bad'">
+                        <span th:text="${auditReport.compliant} ? 'Conforme' : 'Non conforme'"></span>
+                    </div>
+                    <div class="audit-list">
+                        <div class="audit-row" th:each="result : ${auditReport.results}">
+                            <div class="top">
+                                <strong th:text="${result.ruleCode()}"></strong>
+                                <span class="status" th:classappend="${result.isValid()} ? 'ok' : 'bad'" th:text="${result.severity()}"></span>
+                            </div>
+                            <div class="muted" th:text="${result.fieldName()}"></div>
+                            <div class="message" th:text="${result.message()}"></div>
+                            <div class="muted" th:if="${result.actualValue() != null or result.expectedValue() != null}">
+                                Actuel: <span th:text="${result.actualValue()}"></span> · Attendu: <span th:text="${result.expectedValue()}"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>4. Aide à la correction</h2>
+                <ul class="muted" style="margin:0;padding-left:18px;line-height:1.8">
+                    <li>L’ICE émetteur et client doivent contenir 15 chiffres.</li>
+                    <li>Les lignes à TVA nulle doivent avoir une clause CGI.</li>
+                    <li>Le timbre fiscal s’applique si le règlement est en espèces.</li>
+                    <li>Les montants HT + TVA doivent égaler le TTC à l’arrondi près.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+

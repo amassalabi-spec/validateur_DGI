@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Facture</title>
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; }
+        .header { display:flex; justify-content:space-between; align-items:center; }
+        .logo { width:120px; }
+        .seller { text-align:right; }
+        .client { margin-top:20px; }
+        table { width:100%; border-collapse:collapse; margin-top:10px; }
+        th, td { border:1px solid #ccc; padding:6px; }
+        .right { text-align:right; }
+        .totals { margin-top:10px; width:100%; }
+        .footer { margin-top:20px; font-size:10px; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <div class="logo">
+        <img th:src="${invoice != null}? ${invoice.issuerCnss} : ''" alt="Logo" style="max-width:120px"/>
+    </div>
+    <div class="seller">
+        <div th:text="${invoice.issuerName}"></div>
+        <div th:text="${invoice.issuerAddress}"></div>
+        <div>ICE: <span th:text="${invoice.issuerIce}"></span></div>
+        <div>IF: <span th:text="${invoice.issuerIf}"></span> | RC: <span th:text="${invoice.issuerRc}"></span></div>
+        <div>Patente: <span th:text="${invoice.issuerPatente}"></span></div>
+    </div>
+</div>
+
+<div class="client">
+    <h3>Client</h3>
+    <div th:text="${invoice.clientName}"></div>
+    <div th:text="${invoice.clientAddress}"></div>
+    <div>ICE: <span th:text="${invoice.clientIce}"></span></div>
+</div>
+
+<table>
+    <thead>
+    <tr>
+        <th>Désignation</th>
+        <th>Qté</th>
+        <th>PU HT</th>
+        <th>RRR</th>
+        <th>Taux TVA</th>
+        <th>Total HT</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="item : ${invoice.items}">
+        <td th:text="${item.description}"></td>
+        <td class="right" th:text="${item.quantity}"></td>
+        <td class="right" th:text="${item.unitPriceHt}"></td>
+        <td class="right" th:text="${item.discountAmount}"></td>
+        <td class="right" th:text="${item.vatRate}"></td>
+        <td class="right" th:text="${item.totalLineHt}"></td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="totals">
+    <table>
+        <tr>
+            <td>Total HT</td>
+            <td class="right" th:text="${invoice.totalHt}"></td>
+        </tr>
+        <tr>
+            <td>Total TVA</td>
+            <td class="right" th:text="${invoice.totalTva}"></td>
+        </tr>
+        <tr>
+            <td>Droit de timbre</td>
+            <td class="right" th:text="${invoice.stampDuty}"></td>
+        </tr>
+        <tr>
+            <td>Total TTC</td>
+            <td class="right" th:text="${invoice.totalTtc}"></td>
+        </tr>
+    </table>
+</div>
+
+<div class="footer">
+    <div th:if="${invoice.vatSummaries != null}">
+        <h4>Ventilation TVA</h4>
+        <div th:each="v : ${invoice.vatSummaries}">
+            <span th:text="${v.vatRate}"></span> : HT=<span th:text="${v.baseHt}"></span> TVA=<span th:text="${v.vatAmount}"></span>
+        </div>
+    </div>
+    <div th:if="${invoice.complianceAudits != null}">
+        <h4>Mentions</h4>
+        <div th:each="c : ${invoice.complianceAudits}">
+            <div th:text="${c.ruleCode} + ' - ' + ${c.message}"></div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

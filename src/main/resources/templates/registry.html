@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registre | Validateur DGI</title>
+    <style>
+        :root{--bg:#f8fafc;--card:#fff;--line:#e2e8f0;--muted:#64748b;--primary:#4f46e5}
+        *{box-sizing:border-box}
+        body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);margin:0;padding:24px;color:#0f172a}
+        .shell{max-width:1480px;margin:0 auto}
+        .top{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:18px}
+        .top h1{margin:0;font-size:30px}
+        .top p{margin:8px 0 0;color:var(--muted)}
+        a{color:var(--primary);text-decoration:none;font-weight:700}
+        .links a{margin-left:12px}
+        .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 10px 20px rgba(15,23,42,.05)}
+        table{width:100%;border-collapse:collapse;margin-top:10px}
+        th,td{border-bottom:1px solid var(--line);padding:11px 10px;font-size:13px;text-align:left;vertical-align:top}
+        th{background:#f8fafc;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#64748b}
+        .status{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700}
+        .good{background:#dcfce7;color:#059669}
+        .bad{background:#fee2e2;color:#e11d48}
+        .wait{background:#fef3c7;color:#d97706}
+        .toolbar{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+        .toolbar .count{color:var(--muted)}
+        .pager{display:flex;justify-content:flex-end;gap:10px;margin-top:14px}
+        .pager a{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+        .pill{display:inline-block;padding:5px 9px;border-radius:999px;background:#eef2ff;color:#4338ca;font-size:12px;font-weight:700}
+        @media (max-width: 720px){body{padding:16px}.top{flex-direction:column;align-items:flex-start}.pager{justify-content:flex-start}}
+    </style>
+</head>
+<body>
+<div class="shell">
+    <div class="top">
+        <div>
+            <h1>Registre des factures</h1>
+            <p><span class="pill" th:text="${totalElements} + ' factures'"></span> pour la société connectée.</p>
+        </div>
+        <div class="links">
+            <a th:href="@{/dashboard}">Dashboard</a>
+            <a th:href="@{/workspace}">Workspace</a>
+            <a th:href="@{/profile}">Profil</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="toolbar">
+            <div class="count">Vue paginée de vos pièces comptables et fiscales.</div>
+            <div class="count">Page <strong th:text="${currentPage + 1}"></strong> / <strong th:text="${totalPages}"></strong></div>
+        </div>
+        <table>
+            <thead>
+            <tr>
+                <th>N°</th>
+                <th>Date</th>
+                <th>Client</th>
+                <th>ICE</th>
+                <th>Total HT</th>
+                <th>Total TTC</th>
+                <th>Statut</th>
+                <th>PDF</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="invoice : ${invoices}">
+                <td th:text="${invoice.invoiceNumber}"></td>
+                <td th:text="${invoice.issueDate}"></td>
+                <td th:text="${invoice.clientName}"></td>
+                <td th:text="${invoice.clientIce}"></td>
+                <td th:text="${invoice.totalHt}"></td>
+                <td th:text="${invoice.totalTtc}"></td>
+                <td>
+                    <span class="status" th:classappend="${invoice.status.name() == 'COMPLIANT'} ? ' good' : (${invoice.status.name() == 'NON_COMPLIANT'} ? ' bad' : ' wait')"
+                          th:text="${invoice.status}"></span>
+                </td>
+                <td><a th:href="@{'/invoices/' + ${invoice.id} + '/pdf'}">Télécharger</a></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="pager" th:if="${totalPages > 1}">
+            <a th:if="${currentPage > 0}" th:href="@{/invoices(page=${currentPage - 1}, size=10)}">← Précédent</a>
+            <a th:if="${currentPage + 1 < totalPages}" th:href="@{/invoices(page=${currentPage + 1}, size=10)}">Suivant →</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
