@@ -6,57 +6,112 @@ import com.audit.dgi.validateur_dgi.domain.TemplateStyle;
 import com.audit.dgi.validateur_dgi.dto.ClientDTO;
 import com.audit.dgi.validateur_dgi.dto.IssuerDTO;
 import com.audit.dgi.validateur_dgi.dto.InvoiceData;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.converter.BeanOutputConverter;
-import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Extraction de facture via l'API REST Generative Language de Gemini (google.generative).
+ * On appelle directement le endpoint REST avec la cle API ({@code x-goog-api-key}); le client
+ * VertexAI de Spring AI est volontairement ignore (il exigerait des credentials GCP).
+ * Sans cle API, on bascule en toute transparence sur {@link FallbackParsingService}.
+ */
 @Service
 public class SpringAiParsingService implements InvoiceParsingService {
 
     private static final Logger log = LoggerFactory.getLogger(SpringAiParsingService.class);
 
-    /** Budget d'entrée (tokens): on n'envoie jamais plus de X caracteres de texte brut. */
+    private static final String GEMINI_URL =
+            "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent";
+
+    /** Budget d'entree (tokens): on n'envoie jamais plus de X caracteres de texte brut. */
     private static final int MAX_INPUT_CHARS = 8000;
     /** Fraction du budget reservee au debut du texte (le reste pour la fin, ou sont les totaux). */
     private static final double HEAD_RATIO = 0.7;
 
-    private final ObjectProvider<ChatModel> chatModelProvider;
     private final FallbackParsingService fallbackParsingService;
-    private final BeanOutputConverter<InvoiceData> outputConverter = new BeanOutputConverter<>(InvoiceData.class);
+    private final RestClient restClient;
+    private final ObjectMapper objectMapper;
 
-    public SpringAiParsingService(ObjectProvider<ChatModel> chatModelProvider,
+    @Value("${app.gemini.api-key:}")
+    private String apiKey;
+    @Value("${app.gemini.model:gemini-2.5-flash}")
+    private String model;
+    @Value("${app.gemini.temperature:0.1}")
+    private double temperature;
+    @Value("${app.gemini.max-output-tokens:2000}")
+    private int maxOutputTokens;
+
+    public SpringAiParsingService(RestClient.Builder builder,
+                                  ObjectMapper objectMapper,
                                   FallbackParsingService fallbackParsingService) {
-        this.chatModelProvider = chatModelProvider;
+        this.restClient = builder.build();
+        this.objectMapper = objectMapper;
         this.fallbackParsingService = fallbackParsingService;
     }
 
     @Override
     public InvoiceData parse(String rawText) {
-        ChatModel chatModel = chatModelProvider.getIfAvailable();
-        if (chatModel == null || rawText == null || rawText.isBlank()) {
-            log.debug("Spring AI indisponible, bascule sur le parser fallback");
+        if (apiKey == null || apiKey.isBlank()) {
+            log.debug("GEMINI_API_KEY absente, bascule sur le parser fallback");
             return fallbackParsingService.parse(rawText);
         }
-
+        if (rawText == null || rawText.isBlank()) {
+            return fallbackParsingService.parse(rawText);
+        }
         try {
             String promptText = buildPrompt(rawText);
-            ChatResponse response = chatModel.call(new Prompt(new UserMessage(promptText)));
-            String content = response.getResult().getOutput().getText();
-            InvoiceData parsed = outputConverter.convert(sanitizeJson(content));
+            String content = generateContent(promptText);
+            InvoiceData parsed = objectMapper.readValue(sanitizeJson(content), InvoiceData.class);
             if (parsed != null) {
-                log.debug("Extraction Spring AI réussie");
+                log.debug("Extraction Gemini reussie");
                 return mergeWithFallback(parsed, fallbackParsingService.parse(rawText));
             }
         } catch (Exception ex) {
-            log.warn("Échec de l'extraction Spring AI ({}), bascule sur le parser fallback", ex.getMessage());
+            log.warn("Extraction Gemini echouee ({}), bascule sur le parser fallback", ex.getMessage());
         }
         return fallbackParsingService.parse(rawText);
+    }
+
+    private String generateContent(String prompt) {
+        Map<String, Object> part = Map.of("text", prompt);
+        Map<String, Object> contents = Map.of("parts", List.of(part), "role", "user");
+        Map<String, Object> generationConfig = Map.of(
+                "temperature", temperature,
+                "maxOutputTokens", maxOutputTokens,
+                "responseMimeType", "application/json",
+                "thinkingConfig", Map.of("thinkingBudget", 0));
+        Map<String, Object> payload = Map.of("contents", List.of(contents), "generationConfig", generationConfig);
+
+        JsonNode resp = restClient.post()
+                .uri(GEMINI_URL, model)
+                .header("x-goog-api-key", apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(payload)
+                .retrieve()
+                .body(JsonNode.class);
+
+        if (resp == null) {
+            throw new IllegalStateException("reponse Gemini vide");
+        }
+        JsonNode candidates = resp.path("candidates");
+        if (!candidates.isArray() || candidates.isEmpty()) {
+            throw new IllegalStateException("aucun candidat dans la reponse Gemini");
+        }
+        JsonNode text = candidates.path(0).path("content").path("parts").path(0).path("text");
+        String content = text.isMissingNode() ? null : text.asText();
+        if (content == null || content.isBlank()) {
+            throw new IllegalStateException("reponse Gemini sans texte");
+        }
+        return content;
     }
 
     private String sanitizeJson(String content) {
@@ -130,15 +185,12 @@ public class SpringAiParsingService implements InvoiceParsingService {
                 - issuer: { name, address, ice (15 chiffres), ifNumber (6 a 8 chiffres), patente, rc, cnss }.
                 - client: { name, address, ice (15 chiffres) }.
                 - items: { lineNumber, description, quantity, unitPriceHt, discountAmount, vatRate, totalLineHt, totalLineTva, totalLineTtc, cgiExemptionClause }.
-                - vatSummaries: { vatRate, taxableBase, vatAmount }.
+                - vatSummaries: { vatRate, baseHt, vatAmount }.
                 - paymentMethod: une valeur exacte parmi: %s.
                 - chosenTemplate: une valeur exacte parmi: %s.
                 - status: %s.
                 - Montants en nombres JSON (jamais de chaînes). issueDate au format ISO yyyy-MM-dd.
                 - Donnee absente -> chaîne vide ou valeur nulle coherente. AUCUN texte hors JSON.
-
-                Schema attendu:
-                %s
 
                 Texte brut:
                 %s
@@ -146,7 +198,6 @@ public class SpringAiParsingService implements InvoiceParsingService {
                 java.util.Arrays.stream(PaymentMethod.values()).map(Enum::name).toList(),
                 java.util.Arrays.stream(TemplateStyle.values()).map(Enum::name).toList(),
                 InvoiceStatus.PENDING_AUDIT,
-                outputConverter.getFormat(),
                 input);
     }
 
