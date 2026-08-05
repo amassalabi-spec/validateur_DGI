@@ -42,6 +42,7 @@ public class ProfileController {
         company.setRc(form.getRc());
         company.setCnss(form.getCnss());
         company.setLogoUrl(form.getLogoUrl());
+        company.setTvaRegime(form.getTvaRegime());
         companyRepository.save(company);
         redirectAttributes.addFlashAttribute("saved", true);
         return "redirect:/profile";

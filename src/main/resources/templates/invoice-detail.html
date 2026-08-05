@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${invoice.invoiceNumber} + ' | Registre DGI'">Détail facture | Validateur DGI</title>
+    <style>
+        :root{--bg:#f8fafc;--card:#fff;--line:#e2e8f0;--muted:#64748b;--primary:#4f46e5;--good:#059669;--bad:#e11d48;--warn:#d97706}
+        *{box-sizing:border-box}
+        body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);margin:0;color:#0f172a}
+        .main{padding:24px}
+        .shell{max-width:1200px;margin:0 auto}
+        .top{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:18px;flex-wrap:wrap}
+        .top h1{margin:0;font-size:26px}
+        .top p{margin:8px 0 0;color:var(--muted);font-size:14px}
+        a{color:var(--primary);text-decoration:none;font-weight:700}
+        .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 10px 20px rgba(15,23,42,.05)}
+        .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+        .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+        .kpi{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px}
+        .kpi span{display:block;color:var(--muted);font-size:12px}
+        .kpi strong{display:block;margin-top:6px;font-size:22px}
+        table{width:100%;border-collapse:collapse;margin-top:10px}
+        th,td{border-bottom:1px solid var(--line);padding:9px 8px;font-size:13px;text-align:left}
+        th{background:#f8fafc;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#64748b}
+        .status{display:inline-flex;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700}
+        .good{background:#dcfce7;color:var(--good)}
+        .bad{background:#fee2e2;color:var(--bad)}
+        .wait{background:#fef3c7;color:var(--warn)}
+        .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:10px;border:0;font-weight:700;font-size:13px;cursor:pointer;text-decoration:none}
+        .btn-primary{background:var(--primary);color:#fff}
+        .btn-ghost{background:#fff;color:#334155;border:1px solid #cbd5e1}
+        .btn-danger{background:#fff;color:#e11d48;border:1px solid #fecdd3}
+        .audit-row{padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-top:8px;font-size:13px}
+        .audit-row .code{font-family:monospace;font-size:11px;color:var(--muted)}
+        .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+        dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0;font-size:13px}
+        dt{color:var(--muted);font-weight:600}
+        dd{margin:0;font-weight:700}
+        @media (max-width: 900px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}}
+    </style>
+</head>
+<body>
+<div class="app">
+    <th:block th:replace="~{fragments/layout :: sidebar('registre')}" />
+    <th:block th:replace="~{fragments/layout :: mobilenav('registre')}" />
+    <main class="main">
+        <div class="shell">
+            <div class="top">
+                <div>
+                    <h1 th:text="${invoice.invoiceNumber}"></h1>
+                    <p>
+                        <span th:text="${invoice.clientName}"></span>
+                        · émise le <span th:text="${invoice.issueDate}"></span>
+                        · <span th:text="${invoice.originalFileName}"></span>
+                    </p>
+                </div>
+                <div class="actions">
+                    <span class="status" th:classappend="${invoice.status.name() == 'COMPLIANT'} ? ' good' : (${invoice.status.name() == 'NON_COMPLIANT'} ? ' bad' : ' wait')"
+                          th:text="${invoice.status}"></span>
+                    <a class="btn btn-primary" th:href="@{'/invoices/' + ${invoice.id} + '/pdf'}">Télécharger le PDF</a>
+                    <a class="btn btn-ghost" th:href="@{/invoices}">← Retour registre</a>
+                </div>
+            </div>
+
+            <div class="kpis">
+                <div class="kpi"><span>Total HT</span><strong th:text="${invoice.totalHt}"></strong></div>
+                <div class="kpi"><span>Total TVA</span><strong th:text="${invoice.totalTva}"></strong></div>
+                <div class="kpi"><span>Timbre</span><strong th:text="${invoice.stampDuty}"></strong></div>
+                <div class="kpi"><span>Total TTC</span><strong th:text="${invoice.totalTtc}"></strong></div>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <h2 style="margin-top:0">Émetteur</h2>
+                    <dl>
+                        <dt>Raison sociale</dt><dd th:text="${invoice.issuerName}"></dd>
+                        <dt>Adresse</dt><dd th:text="${invoice.issuerAddress}"></dd>
+                        <dt>ICE</dt><dd th:text="${invoice.issuerIce}"></dd>
+                        <dt>IF</dt><dd th:text="${invoice.issuerIf}"></dd>
+                        <dt>RC</dt><dd th:text="${invoice.issuerRc}"></dd>
+                        <dt>Patente</dt><dd th:text="${invoice.issuerPatente}"></dd>
+                    </dl>
+                </div>
+                <div class="card">
+                    <h2 style="margin-top:0">Client</h2>
+                    <dl>
+                        <dt>Raison sociale</dt><dd th:text="${invoice.clientName}"></dd>
+                        <dt>Adresse</dt><dd th:text="${invoice.clientAddress}"></dd>
+                        <dt>ICE</dt><dd th:text="${invoice.clientIce}"></dd>
+                        <dt>Mode de règlement</dt><dd th:text="${invoice.paymentMethod}"></dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top:18px">
+                <h2 style="margin-top:0">Lignes de facture</h2>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Désignation</th>
+                        <th>Qté</th>
+                        <th>PU HT</th>
+                        <th>Remise</th>
+                        <th>TVA %</th>
+                        <th>Total HT</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="item : ${invoice.items}">
+                        <td th:text="${item.lineNumber}"></td>
+                        <td th:text="${item.description}"></td>
+                        <td th:text="${item.quantity}"></td>
+                        <td th:text="${item.unitPriceHt}"></td>
+                        <td th:text="${item.discountAmount}"></td>
+                        <td th:text="${item.vatRate}"></td>
+                        <td th:text="${item.totalLineHt}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="grid" style="margin-top:18px">
+                <div class="card">
+                    <h2 style="margin-top:0">Ventilation TVA</h2>
+                    <table th:if="${!invoice.vatSummaries.isEmpty()}">
+                        <thead><tr><th>Taux</th><th>Base HT</th><th>TVA</th></tr></thead>
+                        <tbody>
+                        <tr th:each="v : ${invoice.vatSummaries}">
+                            <td th:text="${v.vatRate} + ' %'"></td>
+                            <td th:text="${v.baseHt}"></td>
+                            <td th:text="${v.vatAmount}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <p th:if="${invoice.vatSummaries.isEmpty()}" class="muted" style="color:#64748b">Aucune ventilation TVA.</p>
+                </div>
+                <div class="card">
+                    <h2 style="margin-top:0">Rapport d'audit DGI</h2>
+                    <p th:if="${invoice.complianceAudits.isEmpty()}" class="muted" style="color:#64748b">Aucun contrôle enregistré.</p>
+                    <div class="audit-row" th:each="a : ${invoice.complianceAudits}">
+                        <strong th:text="${a.ruleCode}"></strong> <span class="code" th:text="' · ' + ${a.fieldName}"></span>
+                        <div th:text="${a.message}" style="margin-top:4px;color:#334155"></div>
+                        <div th:if="${a.actualValue != null or a.expectedValue != null}" class="code" style="margin-top:4px">
+                            Actuel: <span th:text="${a.actualValue}"></span> · Attendu: <span th:text="${a.expectedValue}"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions" style="margin-top:18px">
+                <form th:action="@{'/invoices/' + ${invoice.id} + '/delete'}" method="post"
+                      onsubmit="return confirm('Supprimer cette facture du registre ?')">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <button type="submit" class="btn btn-danger">Supprimer la facture</button>
+                </form>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

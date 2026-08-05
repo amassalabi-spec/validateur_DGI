@@ -19,9 +19,11 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
+    private final SuperAdminService superAdminService;
 
-    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider, SuperAdminService superAdminService) {
         this.tokenProvider = tokenProvider;
+        this.superAdminService = superAdminService;
     }
 
     @Override
@@ -35,7 +37,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String role = claims.get("role", String.class);
                 Long companyId = claims.get("companyId", Long.class);
 
-                java.util.List<SimpleGrantedAuthority> authorities = role == null ? java.util.List.of() : java.util.List.of(new SimpleGrantedAuthority(role));
+                java.util.List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();
+                if (role != null) {
+                    authorities.add(new SimpleGrantedAuthority(role));
+                }
+                if (superAdminService.isSuperAdmin(email)) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"));
+                }
                 var auth = new UsernamePasswordAuthenticationToken(email, token, authorities);
                 SecurityContextHolder.getContext().setAuthentication(auth);
                 TenantContext.setCurrentTenant(companyId);

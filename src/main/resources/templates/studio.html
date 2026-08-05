@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Studio PDF | Validateur DGI</title>
+    <style>
+        :root{--bg:#f8fafc;--card:#fff;--line:#e2e8f0;--muted:#64748b;--primary:#4f46e5}
+        *{box-sizing:border-box}
+        body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);margin:0;color:#0f172a}
+        .main{padding:24px}
+        .shell{max-width:1280px;margin:0 auto}
+        .top{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:18px;flex-wrap:wrap}
+        .top h1{margin:0;font-size:26px}
+        .top p{margin:8px 0 0;color:var(--muted);font-size:14px}
+        .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 10px 20px rgba(15,23,42,.05)}
+        .card h2{margin:0 0 12px;font-size:16px}
+        label{display:block;font-size:12px;font-weight:700;color:#334155;margin:14px 0 6px}
+        input,select,textarea{width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;box-sizing:border-box;background:#fff;font-size:13px}
+        textarea{min-height:90px;resize:vertical;line-height:1.6}
+        .button{display:inline-flex;align-items:center;justify-content:center;padding:11px 16px;border-radius:11px;background:var(--primary);color:#fff;text-decoration:none;font-weight:700;border:0;cursor:pointer}
+        .swatches{display:flex;gap:8px}
+        .swatch{width:32px;height:32px;border-radius:8px;border:0;cursor:pointer;transition:transform .12s}
+        .swatch.on{outline:2px solid #0f172a;outline-offset:2px}
+        .seg{display:flex;border:1px solid #cbd5e1;border-radius:8px;padding:2px;gap:2px}
+        .seg button{flex:1;border:0;background:none;border-radius:6px;padding:7px 4px;font-size:12px;font-weight:600;cursor:pointer;color:#475569}
+        .seg button.on{background:#0f172a;color:#fff}
+        .check{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:13px;color:#334155;font-weight:600}
+        .check input{width:auto;accent-color:#4f46e5}
+        .preview-zone{background:#eef2f7;border:1px solid var(--line);border-radius:18px;display:flex;justify-content:center;align-items:flex-start;padding:28px}
+        .a4{width:100%;max-width:600px;background:#fff;padding:36px;box-shadow:0 18px 40px rgba(15,23,42,.18);aspect-ratio:1/1.414}
+        .a4 .phead{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #4f46e5;padding-bottom:18px}
+        .a4 .phead .pbrand{font-size:17px;font-weight:800;color:#0f172a}
+        .a4 .phead .pident{font-family:monospace;font-size:8.5px;line-height:1.6;color:#64748b;margin-top:4px}
+        .a4 .phead .ptitle{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#4f46e5;text-align:right}
+        .a4 .phead .ptitle .ar{font-size:10px;color:#64748b;font-weight:400;text-transform:none;letter-spacing:0}
+        .a4 .phead .pno{font-family:monospace;font-size:9px;color:#334155;margin-top:3px}
+        .a4 .pclient{margin-top:18px;background:#f8fafc;border-radius:8px;padding:10px 12px}
+        .a4 .pclient .cl{font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64748b}
+        .a4 .pclient .cn{font-size:10.5px;font-weight:700;color:#0f172a;margin-top:2px}
+        .a4 .pclient .ci{font-family:monospace;font-size:8.5px;color:#64748b}
+        .a4 table{width:100%;border-collapse:collapse;margin-top:18px;font-size:9.5px}
+        .a4 th{text-align:left;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;padding-bottom:6px}
+        .a4 th.r,.a4 td.r{text-align:right}
+        .a4 td{border-bottom:1px solid #f1f5f9;padding:6px 0;color:#334155}
+        .a4 .ptotals{margin-top:14px;margin-left:auto;width:220px;display:grid;gap:4px;font-size:9.5px;color:#475569}
+        .a4 .ptotals .row{display:flex;justify-content:space-between}
+        .a4 .ptotals .grand{border-top:1px solid #0f172a;padding-top:6px;font-size:11.5px;font-weight:800;color:#4f46e5;display:flex;justify-content:space-between}
+        .a4 .pfoot{margin-top:22px;border-top:1px solid #e2e8f0;padding-top:10px;font-size:8px;line-height:1.6;color:#64748b}
+        .flash{padding:12px 16px;border-radius:12px;margin-bottom:14px;font-size:13px;font-weight:600;background:#dcfce7;color:#065f46}
+        .grid-2{display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start}
+        @media (max-width: 1000px){.grid-2{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div class="app">
+    <th:block th:replace="~{fragments/layout :: sidebar('studio')}" />
+    <th:block th:replace="~{fragments/layout :: mobilenav('studio')}" />
+    <main class="main">
+        <div class="shell">
+            <div class="top">
+                <div>
+                    <h1>Studio PDF</h1>
+                    <p>Modèle de facture conforme et personnalisable — appliqué à tous les PDF générés.</p>
+                </div>
+            </div>
+
+            <div th:if="${saved}" class="flash">Modèle enregistré : les prochains PDF utiliseront ces réglages.</div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <form th:action="@{/studio}" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+                        <h2>Identité du modèle</h2>
+                        <label for="raisonSociale">Raison sociale</label>
+                        <input id="raisonSociale" name="raisonSociale" th:value="${company.name}" required />
+
+                        <label>Couleur d'accent</label>
+                        <input type="hidden" id="accent" name="accent" th:value="${accent}" />
+                        <div class="swatches">
+                            <button type="button" class="swatch" th:each="a : ${accents}"
+                                    th:style="'background:' + ${a.hex}" th:title="${a.nom}"
+                                    th:classappend="${a.hex == accent} ? 'on'"
+                                    th:attr="data-hex=${a.hex}"></button>
+                        </div>
+
+                        <label>Langue du document</label>
+                        <input type="hidden" id="langue" name="langue" th:value="${langue}" />
+                        <div class="seg">
+                            <button type="button" data-lang="fr" class="on">Français</button>
+                            <button type="button" data-lang="ar">العربية</button>
+                            <button type="button" data-lang="bi">Bilingue</button>
+                        </div>
+
+                        <label>Mentions légales</label>
+                        <textarea id="mentions" name="mentions" th:text="${mentions}"></textarea>
+
+                        <label class="check">
+                            <input type="checkbox" name="afficherTimbre" value="true" id="afficherTimbre" th:checked="${afficherTimbre}" />
+                            Afficher la ligne « droit de timbre 0,25 % »
+                        </label>
+
+                        <div style="margin-top:18px">
+                            <button class="button" type="submit" style="width:100%">Enregistrer le modèle</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="preview-zone">
+                    <div class="a4" id="a4">
+                        <div class="phead" id="phead">
+                            <div>
+                                <p class="pbrand" id="pBrand">Zenith Conseil &amp; Audit SARL</p>
+                                <p class="pident" id="pIdent">ICE 002784510000037 · IF 40218855 · RC 412885 Casablanca</p>
+                            </div>
+                            <div class="ptitle">
+                                <span>Facture</span>
+                                <div class="ar" id="pAr">فاتورة</div>
+                                <div class="pno">FAC-2026-0183</div>
+                                <div class="pno" style="color:#94a3b8">26 / 07 / 2026</div>
+                            </div>
+                        </div>
+                        <div class="pclient">
+                            <p class="cl">Client</p>
+                            <p class="cn">Atlas Textile Industries SARL</p>
+                            <p class="ci">ICE 001456782000041</p>
+                        </div>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Désignation</th>
+                                <th class="r">Qté</th>
+                                <th class="r">P.U. HT</th>
+                                <th class="r">Total HT</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr><td>Mission d'audit fiscal — exercice 2025</td><td class="r">1</td><td class="r">42 000</td><td class="r">42 000</td></tr>
+                            <tr><td>Assistance contrôle DGI (12 h)</td><td class="r">12</td><td class="r">1 200</td><td class="r">14 400</td></tr>
+                            <tr><td>Rapport de conformité Art. 145</td><td class="r">1</td><td class="r">6 000</td><td class="r">6 000</td></tr>
+                            </tbody>
+                        </table>
+                        <div class="ptotals">
+                            <div class="row"><span>Total HT</span><span id="pT1">62 400,00</span></div>
+                            <div class="row"><span>TVA 20 %</span><span id="pT2">12 480,00</span></div>
+                            <div class="row" id="pTimbreRow"><span>Droit de timbre 0,25 %</span><span id="pT3">187,20</span></div>
+                            <div class="grand"><span>Total TTC</span><span id="pT4">75 067,20</span></div>
+                        </div>
+                        <p class="pfoot" id="pMentions">Facture émise conformément à l'article 145 du Code Général des Impôts. Pénalité de retard : 3 % par mois entamé.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    const HT = 62400, TVA = 12480;
+    const money = n => new Intl.NumberFormat('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    function setAccent(hex) {
+        document.getElementById('accent').value = hex;
+        document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('on', s.dataset.hex === hex));
+        document.getElementById('phead').style.borderColor = hex;
+        document.getElementById('pBrand').style.color = '#0f172a';
+        document.querySelector('.a4 .ptitle').style.color = hex;
+        document.querySelector('.a4 .ptotals .grand').style.color = hex;
+    }
+    function render() {
+        const brand = document.getElementById('raisonSociale').value || 'Votre société';
+        document.getElementById('pBrand').textContent = brand;
+        const ar = document.getElementById('pAr');
+        ar.style.display = document.getElementById('langue').value === 'fr' ? 'none' : 'block';
+        const showTimbre = document.getElementById('afficherTimbre').checked;
+        const timbre = showTimbre ? (HT + TVA) * 0.0025 : 0;
+        document.getElementById('pTimbreRow').style.display = showTimbre ? 'flex' : 'none';
+        document.getElementById('pT1').textContent = money(HT);
+        document.getElementById('pT2').textContent = money(TVA);
+        document.getElementById('pT3').textContent = money(timbre);
+        document.getElementById('pT4').textContent = money(HT + TVA + timbre);
+        document.getElementById('pMentions').textContent = document.getElementById('mentions').value;
+    }
+    document.querySelectorAll('.swatch').forEach(s => s.addEventListener('click', () => setAccent(s.dataset.hex)));
+    document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+        document.getElementById('langue').value = b.dataset.lang;
+        document.querySelectorAll('.seg button').forEach(x => x.classList.toggle('on', x === b));
+        render();
+    }));
+    ['raisonSociale', 'mentions'].forEach(id => document.getElementById(id).addEventListener('input', render));
+    document.getElementById('afficherTimbre').addEventListener('change', render);
+    render();
+</script>
+</body>
+</html>

@@ -2,12 +2,14 @@ package com.audit.dgi.validateur_dgi.controller;
 
 import com.audit.dgi.validateur_dgi.domain.Invoice;
 import com.audit.dgi.validateur_dgi.domain.InvoiceStatus;
+import com.audit.dgi.validateur_dgi.domain.Company;
 import com.audit.dgi.validateur_dgi.dto.ClientDTO;
 import com.audit.dgi.validateur_dgi.dto.InvoiceItemDTO;
 import com.audit.dgi.validateur_dgi.dto.InvoiceData;
 import com.audit.dgi.validateur_dgi.dto.IssuerDTO;
 import com.audit.dgi.validateur_dgi.engine.AuditReport;
 import com.audit.dgi.validateur_dgi.engine.DgiAuditEngine;
+import com.audit.dgi.validateur_dgi.repository.CompanyRepository;
 import com.audit.dgi.validateur_dgi.repository.InvoiceRepository;
 import com.audit.dgi.validateur_dgi.security.SessionUserService;
 import com.audit.dgi.validateur_dgi.service.InvoiceService;
@@ -35,6 +37,7 @@ public class WorkspaceController {
 	private final PdfGeneratorService pdfGeneratorService;
 	private final SessionUserService sessionUserService;
 	private final InvoiceRepository invoiceRepository;
+	private final CompanyRepository companyRepository;
 
 	public WorkspaceController(PoiExtractionService extractionService,
 							   SpringAiParsingService parsingService,
@@ -42,7 +45,8 @@ public class WorkspaceController {
 							   InvoiceService invoiceService,
 							   PdfGeneratorService pdfGeneratorService,
 							   SessionUserService sessionUserService,
-							   InvoiceRepository invoiceRepository) {
+							   InvoiceRepository invoiceRepository,
+							   CompanyRepository companyRepository) {
 		this.extractionService = extractionService;
 		this.parsingService = parsingService;
 		this.auditEngine = auditEngine;
@@ -50,6 +54,7 @@ public class WorkspaceController {
 		this.pdfGeneratorService = pdfGeneratorService;
 		this.sessionUserService = sessionUserService;
 		this.invoiceRepository = invoiceRepository;
+		this.companyRepository = companyRepository;
 	}
 
 	@ModelAttribute("invoice")
@@ -91,14 +96,23 @@ public class WorkspaceController {
 
 	@PostMapping("/save")
 	public String save(@ModelAttribute("invoice") InvoiceData invoice,
+					   @RequestParam(required = false) String action,
 					   RedirectAttributes redirectAttributes) throws Exception {
 		Long companyId = sessionUserService.currentCompanyId();
 		AuditReport auditReport = auditEngine.executeAudit(invoice);
 		Invoice saved = invoiceService.saveInvoice(invoice, companyId, auditReport);
+		if ("REJECT".equalsIgnoreCase(action)) {
+			saved.setStatus(InvoiceStatus.NON_COMPLIANT);
+			saved.setCompliant(false);
+			invoiceRepository.save(saved);
+			redirectAttributes.addFlashAttribute("rejected", true);
+			return "redirect:/invoices";
+		}
 		saved.setStatus(auditReport.hasErrors() ? InvoiceStatus.NON_COMPLIANT : InvoiceStatus.COMPLIANT);
 		saved.setCompliant(!auditReport.hasErrors());
 		invoiceRepository.save(saved);
-		pdfGeneratorService.generateInvoicePdf(saved, saved.getChosenTemplate());
+		Company company = companyRepository.findById(companyId).orElse(null);
+		pdfGeneratorService.generateInvoicePdf(saved, saved.getChosenTemplate(), company);
 		redirectAttributes.addFlashAttribute("savedInvoiceId", saved.getId());
 		return "redirect:/invoices";
 	}

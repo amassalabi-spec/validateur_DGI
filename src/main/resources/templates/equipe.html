@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Équipe | Validateur DGI</title>
+    <style>
+        :root{--bg:#f8fafc;--card:#fff;--line:#e2e8f0;--muted:#64748b;--primary:#4f46e5;--good:#059669;--bad:#e11d48}
+        *{box-sizing:border-box}
+        body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);margin:0;color:#0f172a}
+        .main{padding:24px}
+        .shell{max-width:1100px;margin:0 auto}
+        .top{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:18px;flex-wrap:wrap}
+        .top h1{margin:0;font-size:26px}
+        .top p{margin:8px 0 0;color:var(--muted);font-size:14px}
+        .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 10px 20px rgba(15,23,42,.05)}
+        .card h2{margin:0 0 12px;font-size:16px}
+        ul{margin:0;padding:0;list-style:none}
+        .member{display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid #f1f5f9}
+        .member:last-child{border-bottom:0}
+        .avatar{width:38px;height:38px;border-radius:50%;background:#eef2ff;color:#4338ca;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+        .mname{font-size:14px;font-weight:700}
+        .mmail{font-size:12px;color:var(--muted)}
+        .badge{display:inline-flex;padding:4px 10px;border-radius:8px;background:#f1f5f9;color:#475569;font-size:11px;font-weight:700}
+        .actif{font-size:11px;font-weight:700;color:var(--good)}
+        .inactif{font-size:11px;font-weight:700;color:#94a3b8}
+        .ml-auto{margin-left:auto}
+        label{display:block;font-size:12px;font-weight:700;color:#334155;margin:12px 0 6px}
+        input,select{width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;font-size:13px}
+        .button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:10px;background:var(--primary);color:#fff;font-weight:700;border:0;cursor:pointer;text-decoration:none}
+        .button.ghost{background:#fff;color:#334155;border:1px solid #cbd5e1}
+        .cols-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        .cols-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px}
+        .flash{padding:12px 16px;border-radius:12px;margin-bottom:14px;font-size:13px;font-weight:600}
+        .flash-ok{background:#dcfce7;color:#065f46}
+        .flash-err{background:#fee2e2;color:#9f1239}
+        .count-pill{color:var(--muted);font-size:13px}
+        @media (max-width: 720px){.cols-2,.cols-4{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div class="app">
+    <th:block th:replace="~{fragments/layout :: sidebar('equipe')}" />
+    <th:block th:replace="~{fragments/layout :: mobilenav('equipe')}" />
+    <main class="main">
+        <div class="shell">
+            <div class="top">
+                <div>
+                    <h1>Équipe</h1>
+                    <p>Collaborateurs et niveaux d'accès.</p>
+                </div>
+            </div>
+
+            <div th:if="${saved}" class="flash flash-ok">Équipe mise à jour.</div>
+            <div th:if="${error}" class="flash flash-err" th:text="${error}"></div>
+
+            <div class="card" style="margin-bottom:18px">
+                <h2>Inviter un collaborateur</h2>
+                <form th:action="@{/equipe/invite}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <div class="cols-4">
+                        <div><label>Nom complet</label><input name="fullName" required /></div>
+                        <div><label>Email</label><input type="email" name="email" required /></div>
+                        <div>
+                            <label>Rôle</label>
+                            <select name="role">
+                                <option value="ROLE_USER">Collaborateur</option>
+                                <option value="ROLE_ADMIN">Administrateur</option>
+                            </select>
+                        </div>
+                        <div><label>Mot de passe provisoire</label><input name="password" required /></div>
+                    </div>
+                    <div style="margin-top:14px">
+                        <button class="button" type="submit">Inviter un collaborateur</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                    <h2>Membres de l'équipe</h2>
+                    <span class="count-pill" th:text="${seatsUsed} + ' / ' + ${seatLimit} + ' sièges'"></span>
+                </div>
+                <ul>
+                    <li class="member" th:each="m : ${membres}">
+                        <span class="avatar"
+                              th:text="${m.fullName != null and m.fullName != ''} ? ${#strings.substring(m.fullName, 0, 2)} : ${#strings.toUpperCase(#strings.substring(m.email, 0, 2))}"></span>
+                        <div>
+                            <p class="mname" th:text="${m.fullName} ?: ${m.email}"></p>
+                            <p class="mmail" th:text="${m.email}"></p>
+                        </div>
+                        <span class="badge ml-auto" th:text="${m.role == 'ROLE_ADMIN'} ? 'Administrateur' : 'Collaborateur'"></span>
+                        <span class="actif" th:if="${m.active == true}" th:text="${m.email == currentUserEmail} ? 'Vous' : 'Actif'"></span>
+                        <span class="inactif" th:if="${m.active == false}">Invitation en attente</span>
+                        <form th:action="@{'/equipe/' + ${m.id} + '/toggle'}" method="post"
+                              th:if="${m.email != currentUserEmail}">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                            <button class="button ghost" type="submit" th:text="${m.active == true} ? 'Désactiver' : 'Activer'"></button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

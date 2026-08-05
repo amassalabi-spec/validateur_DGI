@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,6 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -43,8 +45,23 @@ public class AppUser implements UserDetails {
     @Column(name = "company_id", nullable = false)
     private Long companyId;
 
+    @Column(name = "full_name")
+    private String fullName;
+
+    @Column(name = "active")
+    @Builder.Default
+    private Boolean active = true;
+
+    @Transient
+    private boolean superAdmin;
+
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role));
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority(role));
+        if (superAdmin) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"));
+        }
+        return authorities;
     }
 
     public String getPassword() {
@@ -68,7 +85,7 @@ public class AppUser implements UserDetails {
     }
 
     public boolean isEnabled() {
-        return true;
+        return active == null || active;
     }
 }
 

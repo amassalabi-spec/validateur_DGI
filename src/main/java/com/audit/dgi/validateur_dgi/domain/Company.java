@@ -45,5 +45,20 @@ public class Company {
 
     @Column(name = "logo_url")
     private String logoUrl;
+
+    @Column(name = "tva_regime")
+    private String tvaRegime;
+
+    @Column(name = "template_accent", length = 20)
+    private String templateAccent;
+
+    @Column(name = "template_language", length = 4)
+    private String templateLanguage;
+
+    @Column(name = "template_mentions", length = 2000)
+    private String templateMentions;
+
+    @Column(name = "template_show_stamp_duty")
+    private Boolean templateShowStampDuty;
 }
 

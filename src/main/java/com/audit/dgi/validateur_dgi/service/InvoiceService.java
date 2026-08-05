@@ -89,22 +89,22 @@ public class InvoiceService {
 
     private Invoice toEntity(InvoiceData dto) {
         Invoice inv = Invoice.builder()
-                .originalFileName(dto.getOriginalFileName())
-                .fileType(dto.getFileType())
+                .originalFileName(dto.getOriginalFileName() == null ? "saisie-manuelle" : dto.getOriginalFileName())
+                .fileType(dto.getFileType() == null ? "manual" : dto.getFileType())
                 .invoiceNumber(dto.getInvoiceNumber())
                 .issueDate(dto.getIssueDate() == null ? LocalDate.now() : dto.getIssueDate())
                 .dueDate(dto.getDueDate())
-                .paymentMethod(dto.getPaymentMethod())
-                .issuerName(dto.getIssuer() == null ? null : dto.getIssuer().getName())
-                .issuerAddress(dto.getIssuer() == null ? null : dto.getIssuer().getAddress())
-                .issuerIce(dto.getIssuer() == null ? null : dto.getIssuer().getIce())
-                .issuerIf(dto.getIssuer() == null ? null : dto.getIssuer().getIfNumber())
-                .issuerPatente(dto.getIssuer() == null ? null : dto.getIssuer().getPatente())
-                .issuerRc(dto.getIssuer() == null ? null : dto.getIssuer().getRc())
-                .issuerCnss(dto.getIssuer() == null ? null : dto.getIssuer().getCnss())
-                .clientName(dto.getClient() == null ? null : dto.getClient().getName())
-                .clientAddress(dto.getClient() == null ? null : dto.getClient().getAddress())
-                .clientIce(dto.getClient() == null ? null : dto.getClient().getIce())
+                .paymentMethod(dto.getPaymentMethod() == null ? PaymentMethod.CASH : dto.getPaymentMethod())
+                .issuerName(blank(dto.getIssuer() == null ? null : dto.getIssuer().getName()))
+                .issuerAddress(blank(dto.getIssuer() == null ? null : dto.getIssuer().getAddress()))
+                .issuerIce(blank(dto.getIssuer() == null ? null : dto.getIssuer().getIce()))
+                .issuerIf(blank(dto.getIssuer() == null ? null : dto.getIssuer().getIfNumber()))
+                .issuerPatente(blank(dto.getIssuer() == null ? null : dto.getIssuer().getPatente()))
+                .issuerRc(blank(dto.getIssuer() == null ? null : dto.getIssuer().getRc()))
+                .issuerCnss(blank(dto.getIssuer() == null ? null : dto.getIssuer().getCnss()))
+                .clientName(blank(dto.getClient() == null ? null : dto.getClient().getName()))
+                .clientAddress(blank(dto.getClient() == null ? null : dto.getClient().getAddress()))
+                .clientIce(blank(dto.getClient() == null ? null : dto.getClient().getIce()))
                 .totalHt(safe(dto.getTotalHt()))
                 .totalTva(safe(dto.getTotalTva()))
                 .stampDuty(safe(dto.getStampDuty()))
@@ -114,8 +114,10 @@ public class InvoiceService {
                 .chosenTemplate(dto.getChosenTemplate() == null ? TemplateStyle.MODERN : dto.getChosenTemplate())
                 .build();
 
-        if (dto.getItems() != null) {
-            inv.setItems(dto.getItems().stream().map(this::toEntityItem).collect(Collectors.toList()));
+        if (dto.getItems() == null || dto.getItems().isEmpty()) {
+            inv.setItems(new ArrayList<>());
+        } else {
+            inv.setItems(dto.getItems().stream().map(this::toEntityItem).filter(java.util.Objects::nonNull).collect(Collectors.toList()));
             inv.getItems().forEach(it -> it.setInvoice(inv));
         }
         if (dto.getVatSummaries() != null) {
@@ -130,22 +132,27 @@ public class InvoiceService {
     }
 
     private InvoiceItem toEntityItem(InvoiceItemDTO dto) {
+        if (dto == null) return null;
         return InvoiceItem.builder()
-                .lineNumber(dto.getLineNumber())
-                .description(dto.getDescription())
-                .quantity(dto.getQuantity())
-                .unitPriceHt(dto.getUnitPriceHt())
-                .discountAmount(dto.getDiscountAmount())
-                .vatRate(dto.getVatRate())
-                .totalLineHt(dto.getTotalLineHt())
-                .totalLineTva(dto.getTotalLineTva())
-                .totalLineTtc(dto.getTotalLineTtc())
+                .lineNumber(dto.getLineNumber() == null ? 1 : dto.getLineNumber())
+                .description(blank(dto.getDescription()))
+                .quantity(dto.getQuantity() == null ? BigDecimal.ONE : dto.getQuantity())
+                .unitPriceHt(safe(dto.getUnitPriceHt()))
+                .discountAmount(safe(dto.getDiscountAmount()))
+                .vatRate(dto.getVatRate() == null ? BigDecimal.ZERO : dto.getVatRate())
+                .totalLineHt(safe(dto.getTotalLineHt()))
+                .totalLineTva(safe(dto.getTotalLineTva()))
+                .totalLineTtc(safe(dto.getTotalLineTtc()))
                 .cgiExemptionClause(dto.getCgiExemptionClause())
                 .build();
     }
 
     private BigDecimal safe(BigDecimal b) {
         return b == null ? BigDecimal.ZERO.setScale(2) : b.setScale(2, BigDecimal.ROUND_HALF_UP);
+    }
+
+    private String blank(String s) {
+        return s == null ? "" : s;
     }
 
     public record InvoiceUploadResult(InvoiceData invoiceDTO, AuditReport report, Long invoiceId) {}

@@ -5,21 +5,27 @@
     <title>Facture</title>
     <style>
         body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; }
-        .header { display:flex; justify-content:space-between; align-items:center; }
+        .header { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #4f46e5; padding-bottom:10px; }
         .logo { width:120px; }
         .seller { text-align:right; }
-        .client { margin-top:20px; }
+        .facture-label { font-size:16px; font-weight:bold; color:#4f46e5; text-transform:uppercase; letter-spacing:.06em; }
+        .bilingue { font-size:11px; color:#64748b; }
+        .client { margin-top:16px; background:#f8fafc; padding:8px 10px; border-radius:6px; }
+        .client .client-title { font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:#64748b; font-weight:bold; }
         table { width:100%; border-collapse:collapse; margin-top:10px; }
-        th, td { border:1px solid #ccc; padding:6px; }
+        th { border-bottom:1px solid #e2e8f0; padding:6px; text-align:left; font-size:10px; text-transform:uppercase; color:#64748b; }
+        td { border-bottom:1px solid #f1f5f9; padding:6px; }
         .right { text-align:right; }
-        .totals { margin-top:10px; width:100%; }
-        .footer { margin-top:20px; font-size:10px; }
+        .totals { margin-top:12px; width:220px; margin-left:auto; }
+        .totals td { border:0; padding:3px 0; }
+        .totals .grand { border-top:1px solid #0f172a; font-weight:bold; font-size:14px; }
+        .footer { margin-top:20px; font-size:10px; color:#64748b; border-top:1px solid #e2e8f0; padding-top:8px; }
     </style>
 </head>
 <body>
-<div class="header">
+<div class="header" th:style="'border-bottom:2px solid ' + ${accent}">
     <div class="logo">
-        <img th:src="${invoice != null}? ${invoice.issuerCnss} : ''" alt="Logo" style="max-width:120px"/>
+        <img th:if="${invoice.issuerCnss != null and invoice.issuerCnss != ''}" th:src="${invoice.issuerCnss}" alt="Logo" style="max-width:120px"/>
     </div>
     <div class="seller">
         <div th:text="${invoice.issuerName}"></div>
@@ -30,11 +36,18 @@
     </div>
 </div>
 
+<div style="text-align:right;margin-top:8px">
+    <span class="facture-label" th:style="'color:' + ${accent}">Facture</span>
+    <div class="bilingue" th:if="${language != 'fr'}" dir="rtl">فاتورة</div>
+    <div class="bilingue" th:text="'N° ' + ${invoice.invoiceNumber}"></div>
+    <div class="bilingue" th:text="${invoice.issueDate}"></div>
+</div>
+
 <div class="client">
-    <h3>Client</h3>
-    <div th:text="${invoice.clientName}"></div>
-    <div th:text="${invoice.clientAddress}"></div>
-    <div>ICE: <span th:text="${invoice.clientIce}"></span></div>
+    <span class="client-title">Client</span>
+    <div style="font-weight:bold" th:text="${invoice.clientName}"></div>
+    <div style="font-size:11px" th:text="${invoice.clientAddress}"></div>
+    <div style="font-size:11px">ICE: <span th:text="${invoice.clientIce}"></span></div>
 </div>
 
 <table>
@@ -70,28 +83,23 @@
             <td>Total TVA</td>
             <td class="right" th:text="${invoice.totalTva}"></td>
         </tr>
-        <tr>
+        <tr th:if="${showStampDuty}">
             <td>Droit de timbre</td>
             <td class="right" th:text="${invoice.stampDuty}"></td>
         </tr>
-        <tr>
+        <tr class="grand">
             <td>Total TTC</td>
-            <td class="right" th:text="${invoice.totalTtc}"></td>
+            <td class="right" th:style="'color:' + ${accent}" th:text="${invoice.totalTtc}"></td>
         </tr>
     </table>
 </div>
 
 <div class="footer">
-    <div th:if="${invoice.vatSummaries != null}">
-        <h4>Ventilation TVA</h4>
+    <div th:text="${mentions}"></div>
+    <div th:if="${invoice.vatSummaries != null and !invoice.vatSummaries.isEmpty()}" style="margin-top:8px">
+        <strong>Ventilation TVA</strong>
         <div th:each="v : ${invoice.vatSummaries}">
-            <span th:text="${v.vatRate}"></span> : HT=<span th:text="${v.baseHt}"></span> TVA=<span th:text="${v.vatAmount}"></span>
-        </div>
-    </div>
-    <div th:if="${invoice.complianceAudits != null}">
-        <h4>Mentions</h4>
-        <div th:each="c : ${invoice.complianceAudits}">
-            <div th:text="${c.ruleCode} + ' - ' + ${c.message}"></div>
+            <span th:text="${v.vatRate}"></span>% : HT=<span th:text="${v.baseHt}"></span> · TVA=<span th:text="${v.vatAmount}"></span>
         </div>
     </div>
 </div>

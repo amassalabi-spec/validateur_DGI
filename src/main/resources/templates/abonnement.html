@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Abonnement | Validateur DGI</title>
+    <style>
+        :root{--bg:#f8fafc;--card:#fff;--line:#e2e8f0;--muted:#64748b;--primary:#4f46e5;--good:#059669}
+        *{box-sizing:border-box}
+        body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);margin:0;color:#0f172a}
+        .main{padding:24px}
+        .shell{max-width:1100px;margin:0 auto}
+        .top{margin-bottom:18px}
+        .top h1{margin:0;font-size:26px}
+        .top p{margin:8px 0 0;color:var(--muted);font-size:14px}
+        .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 10px 20px rgba(15,23,42,.05)}
+        .card h2{margin:0 0 12px;font-size:16px}
+        .grid-2{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;align-items:start}
+        .plan{border-left:4px solid var(--primary)}
+        .plan .k{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64748b}
+        .plan .p{font-size:26px;font-weight:800;margin:8px 0 4px}
+        .plan .p span{font-size:15px;font-weight:600;color:#64748b}
+        .plan .renew{font-size:13px;color:#64748b}
+        dl.usage{display:grid;grid-template-columns:1fr 1fr;gap:16px;border-top:1px solid var(--line);padding-top:18px;margin:18px 0 14px}
+        dl.usage dt{font-size:12px;color:#64748b}
+        dl.usage dd{margin:4px 0 0;font-size:22px;font-weight:800}
+        .bar{height:6px;border-radius:999px;background:#f1f5f9;overflow:hidden}
+        .bar div{height:100%;border-radius:999px;background:var(--primary)}
+        ul{list-style:none;margin:0;padding:0}
+        .bill{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px}
+        .bill:last-child{border-bottom:0}
+        .bill .m{color:#334155}
+        .bill .a{font-weight:700}
+        .bill .paid{background:#ecfdf5;color:#047857;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px}
+        @media (max-width: 900px){.grid-2{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div class="app">
+    <th:block th:replace="~{fragments/layout :: sidebar('abonnement')}" />
+    <th:block th:replace="~{fragments/layout :: mobilenav('abonnement')}" />
+    <main class="main">
+        <div class="shell">
+            <div class="top">
+                <h1>Abonnement</h1>
+                <p>Formule, consommation et historique de facturation.</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="card plan">
+                    <p class="k">Formule actuelle</p>
+                    <p class="p" th:text="${planLabel} + ' — ' + ${planPrice}"><span> / mois</span></p>
+                    <p class="renew">Renouvellement le <span th:text="${renewalDate}"></span> · facturation annuelle</p>
+                    <dl class="usage">
+                        <div>
+                            <dt>Factures auditées ce mois</dt>
+                            <dd th:text="${auditedThisMonth} + ' / ' + ${monthlyLimit}"></dd>
+                        </div>
+                        <div>
+                            <dt>Sièges utilisés</dt>
+                            <dd th:text="${seatsUsed} + ' / ' + ${seatLimit}"></dd>
+                        </div>
+                    </dl>
+                    <div class="bar"><div th:style="'width:' + ${usagePct} + '%'"></div></div>
+                    <p style="font-size:12px;color:#64748b;margin:10px 0 0" th:text="${usagePct} + ' % du quota mensuel consommé'"></p>
+                </div>
+
+                <div class="card">
+                    <h2>Dernières factures d'abonnement</h2>
+                    <ul>
+                        <li class="bill" th:each="b : ${lastInvoices}">
+                            <span class="m" th:text="${b[0]}"></span>
+                            <span class="a" th:text="${b[1]}"></span>
+                            <span class="paid">Payée</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

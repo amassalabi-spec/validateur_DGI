@@ -21,6 +21,11 @@ public class SpringAiParsingService implements InvoiceParsingService {
 
     private static final Logger log = LoggerFactory.getLogger(SpringAiParsingService.class);
 
+    /** Budget d'entrée (tokens): on n'envoie jamais plus de X caracteres de texte brut. */
+    private static final int MAX_INPUT_CHARS = 8000;
+    /** Fraction du budget reservee au debut du texte (le reste pour la fin, ou sont les totaux). */
+    private static final double HEAD_RATIO = 0.7;
+
     private final ObjectProvider<ChatModel> chatModelProvider;
     private final FallbackParsingService fallbackParsingService;
     private final BeanOutputConverter<InvoiceData> outputConverter = new BeanOutputConverter<>(InvoiceData.class);
@@ -116,25 +121,23 @@ public class SpringAiParsingService implements InvoiceParsingService {
     }
 
     private String buildPrompt(String rawText) {
+        String input = truncateText(rawText);
         return """
                 Tu es un moteur d'extraction fiscale DGI Maroc.
-                Analyse le texte brut de facture ci-dessous et retourne UNIQUEMENT un objet JSON valide conforme au schéma attendu.
+                Analyse le texte brut de facture et retourne UNIQUEMENT un objet JSON valide conforme au schema.
                 Règles:
-                - Extrais la structure de la facture vers un objet InvoiceData.
                 - Inclus au minimum: invoiceNumber, issueDate, paymentMethod, issuer, client, totalHt, totalTva, stampDuty, totalTtc, items, vatSummaries.
-                - issuer: { name, address, ice (15 chiffres), ifNumber (6 à 8 chiffres), patente, rc, cnss }.
+                - issuer: { name, address, ice (15 chiffres), ifNumber (6 a 8 chiffres), patente, rc, cnss }.
                 - client: { name, address, ice (15 chiffres) }.
-                - items: tableau d'objets { lineNumber, description, quantity, unitPriceHt, discountAmount, vatRate, totalLineHt, totalLineTva, totalLineTtc, cgiExemptionClause }.
-                - vatSummaries: tableau d'objets { vatRate, taxableBase, vatAmount }.
-                - paymentMethod: utilise exactement une de ces valeurs: %s.
-                - chosenTemplate: utilise exactement une de ces valeurs: %s.
-                - status: utilise exactement %s.
-                - Convertis tous les montants en nombres JSON (jamais de chaînes).
-                - L'issueDate doit être au format ISO yyyy-MM-dd.
-                - Si une donnée est absente, utilise une valeur vide ("" pour les chaînes) ou nulle cohérente.
-                - Ne retourne aucun texte hors JSON (ni commentaire, ni marqueurs ```).
+                - items: { lineNumber, description, quantity, unitPriceHt, discountAmount, vatRate, totalLineHt, totalLineTva, totalLineTtc, cgiExemptionClause }.
+                - vatSummaries: { vatRate, taxableBase, vatAmount }.
+                - paymentMethod: une valeur exacte parmi: %s.
+                - chosenTemplate: une valeur exacte parmi: %s.
+                - status: %s.
+                - Montants en nombres JSON (jamais de chaînes). issueDate au format ISO yyyy-MM-dd.
+                - Donnee absente -> chaîne vide ou valeur nulle coherente. AUCUN texte hors JSON.
 
-                Schéma attendu:
+                Schema attendu:
                 %s
 
                 Texte brut:
@@ -144,6 +147,16 @@ public class SpringAiParsingService implements InvoiceParsingService {
                 java.util.Arrays.stream(TemplateStyle.values()).map(Enum::name).toList(),
                 InvoiceStatus.PENDING_AUDIT,
                 outputConverter.getFormat(),
-                rawText);
+                input);
+    }
+
+    private String truncateText(String rawText) {
+        if (rawText == null || rawText.length() <= MAX_INPUT_CHARS) {
+            return rawText;
+        }
+        int head = (int) (MAX_INPUT_CHARS * HEAD_RATIO);
+        int tail = MAX_INPUT_CHARS - head;
+        return rawText.substring(0, head) + "\n[...] (texte tronqué pour limiter les tokens) [...]\n"
+                + rawText.substring(rawText.length() - tail);
     }
 }

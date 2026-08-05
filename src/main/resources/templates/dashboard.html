@@ -3,23 +3,25 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard | Validateur DGI</title>
+    <title>Dashboard BI | Validateur DGI</title>
     <style>
         :root{--bg:#f8fafc;--card:#fff;--line:#e2e8f0;--muted:#64748b;--primary:#4f46e5;--good:#059669;--bad:#e11d48;--warning:#d97706}
         *{box-sizing:border-box}
-        body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);margin:0;padding:24px;color:#0f172a}
+        body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);margin:0;color:#0f172a}
+        .main{padding:24px}
         .shell{max-width:1480px;margin:0 auto}
-        .top{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:18px}
-        .top h1{margin:0;font-size:30px}
-        .top p{margin:8px 0 0;color:var(--muted)}
+        .top{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:18px;flex-wrap:wrap}
+        .top h1{margin:0;font-size:26px}
+        .top p{margin:8px 0 0;color:var(--muted);font-size:14px}
         a{color:var(--primary);text-decoration:none;font-weight:700}
-        .links a{margin-left:12px}
         .kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
         .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 10px 20px rgba(15,23,42,.05)}
-        .card h2{margin:0 0 10px;font-size:18px}
+        .card h2{margin:0 0 12px;font-size:17px}
         .kpi .label{color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-        .kpi .value{font-size:28px;font-weight:800;margin-top:8px}
-        .kpi .hint{margin-top:8px;font-size:13px;color:var(--muted);line-height:1.5}
+        .kpi .value{font-size:26px;font-weight:800;margin-top:8px}
+        .kpi .hint{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.5}
+        .charts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+        .chart-card canvas{max-height:260px}
         .rows{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;margin-top:18px}
         table{width:100%;border-collapse:collapse;margin-top:10px}
         th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;font-size:14px}
@@ -33,72 +35,156 @@
         .invoice-card .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin:0}
         .invoice-card .meta{color:var(--muted);font-size:12px;margin-top:6px}
         .stack{display:grid;gap:14px}
-        @media (max-width: 1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.rows{grid-template-columns:1fr}}
-        @media (max-width: 720px){body{padding:16px}.kpis{grid-template-columns:1fr 1fr}.top{flex-direction:column;align-items:flex-start}}
+        .filters{display:flex;gap:10px;align-items:center}
+        .filters select{padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:600}
+        @media (max-width: 1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.rows,.charts{grid-template-columns:1fr}}
+        @media (max-width: 720px){body{padding:0}.main{padding:16px}.kpis{grid-template-columns:1fr 1fr}}
     </style>
 </head>
 <body>
-<div class="shell">
-    <div class="top">
-        <div>
-            <h1>Dashboard DGI</h1>
-            <p>Vue consolidée de votre société connectée.</p>
-        </div>
-        <div class="links">
-            <a th:href="@{/workspace}">Workspace</a>
-            <a th:href="@{/invoices}">Registre</a>
-            <a th:href="@{/profile}">Profil</a>
-        </div>
-    </div>
+<div class="app">
+    <th:block th:replace="~{fragments/layout :: sidebar('dashboard')}" />
+    <th:block th:replace="~{fragments/layout :: mobilenav('dashboard')}" />
+    <main class="main">
+        <div class="shell">
+            <div class="top">
+                <div>
+                    <h1>Dashboard BI</h1>
+                    <p>Vue consolidée de vos obligations fiscales de l’exercice.</p>
+                </div>
+                <form class="filters" th:action="@{/dashboard}" method="get">
+                    <label for="exercice" style="font-size:12px;color:#64748b;font-weight:700">Exercice</label>
+                    <select id="exercice" name="exercice" onchange="this.form.submit()">
+                        <option th:each="y : ${years}" th:value="${y}" th:text="'Année ' + ${y}" th:selected="${y == exercice}"></option>
+                    </select>
+                </form>
+            </div>
 
-    <div class="kpis">
-        <div class="card kpi"><div class="label">TVA 20%</div><div class="value" th:text="${vat20}"></div><div class="hint">TVA collectée sur les factures à taux normal.</div></div>
-        <div class="card kpi"><div class="label">TVA 10%</div><div class="value" th:text="${vat10}"></div><div class="hint">TVA collectée sur les taux réduits suivis.</div></div>
-        <div class="card kpi"><div class="label">CA HT</div><div class="value" th:text="${totalHt}"></div><div class="hint">Chiffre d’affaires hors taxe cumulé.</div></div>
-        <div class="card kpi"><div class="label">CA TTC</div><div class="value" th:text="${totalTtc}"></div><div class="hint">Chiffre d’affaires total facturé.</div></div>
-        <div class="card kpi"><div class="label">Conformité</div><div class="value"><span th:text="${complianceRate}"></span>%</div><div class="hint">Factures conformes DGI sur l’exercice.</div></div>
-        <div class="card kpi"><div class="label">Timbre</div><div class="value" th:text="${stampDuty}"></div><div class="hint">Droit de timbre sur les espèces.</div></div>
-    </div>
+            <div class="kpis">
+                <div class="card kpi"><div class="label">TVA 20%</div><div class="value" th:text="${vat20}"></div><div class="hint">TVA collectée sur les factures à taux normal.</div></div>
+                <div class="card kpi"><div class="label">TVA 10%</div><div class="value" th:text="${vat10}"></div><div class="hint">TVA collectée sur les taux réduits suivis.</div></div>
+                <div class="card kpi"><div class="label">CA HT</div><div class="value" th:text="${totalHt}"></div><div class="hint">Chiffre d’affaires hors taxe cumulé.</div></div>
+                <div class="card kpi"><div class="label">CA TTC</div><div class="value" th:text="${totalTtc}"></div><div class="hint">Chiffre d’affaires total facturé.</div></div>
+                <div class="card kpi"><div class="label">Conformité</div><div class="value"><span th:text="${complianceRate}"></span>%</div><div class="hint">Factures conformes DGI sur l’exercice.</div></div>
+                <div class="card kpi"><div class="label">Timbre</div><div class="value" th:text="${stampDuty}"></div><div class="hint">Droit de timbre sur les espèces.</div></div>
+            </div>
 
-    <div class="rows">
-        <div class="card">
-            <h2>Dernières factures</h2>
-            <table>
-                <thead>
-                <tr>
-                    <th>N°</th>
-                    <th>Client</th>
-                    <th>Statut</th>
-                    <th>Total TTC</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="invoice : ${recentInvoices}">
-                    <td th:text="${invoice.invoiceNumber}"></td>
-                    <td th:text="${invoice.clientName}"></td>
-                    <td>
-                        <span class="badge" th:classappend="${invoice.status.name() == 'COMPLIANT'} ? ' good' : (${invoice.status.name() == 'NON_COMPLIANT'} ? ' bad' : ' warning')"
-                              th:text="${invoice.status}"></span>
-                    </td>
-                    <td th:text="${invoice.totalTtc}"></td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
+            <div class="charts">
+                <div class="card chart-card">
+                    <h2>TVA collectée par mois</h2>
+                    <canvas id="chartTva"></canvas>
+                </div>
+                <div class="card chart-card">
+                    <h2>Évolution du taux de conformité</h2>
+                    <canvas id="chartConformite"></canvas>
+                </div>
+                <div class="card chart-card">
+                    <h2>Encaissements par mode de règlement</h2>
+                    <canvas id="chartReglements"></canvas>
+                </div>
+                <div class="card chart-card">
+                    <h2>Anomalies les plus fréquentes</h2>
+                    <canvas id="chartAnomalies"></canvas>
+                </div>
+            </div>
 
-        <div class="stack">
-            <div class="card">
-                <h2>Synthèse conformité</h2>
-                <div class="list">
-                    <div class="invoice-card"><strong>Factures auditées</strong><div class="meta" th:text="${invoiceCount}"></div></div>
-                    <div class="invoice-card"><strong>Conformes</strong><div class="meta" th:text="${compliantCount}"></div></div>
-                    <div class="invoice-card"><strong>Non conformes</strong><div class="meta" th:text="${nonCompliantCount}"></div></div>
+            <div class="rows">
+                <div class="card">
+                    <h2>Dernières factures</h2>
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>N°</th>
+                            <th>Client</th>
+                            <th>Statut</th>
+                            <th>Total TTC</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="invoice : ${recentInvoices}">
+                            <td th:text="${invoice.invoiceNumber}"></td>
+                            <td th:text="${invoice.clientName}"></td>
+                            <td>
+                                <span class="badge" th:classappend="${invoice.status.name() == 'COMPLIANT'} ? ' good' : (${invoice.status.name() == 'NON_COMPLIANT'} ? ' bad' : ' warning')"
+                                      th:text="${invoice.status}"></span>
+                            </td>
+                            <td th:text="${invoice.totalTtc}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="stack">
+                    <div class="card">
+                        <h2>Synthèse conformité</h2>
+                        <div class="list">
+                            <div class="invoice-card"><strong>Factures auditées</strong><div class="meta" th:text="${invoiceCount}"></div></div>
+                            <div class="invoice-card"><strong>Conformes</strong><div class="meta" th:text="${compliantCount}"></div></div>
+                            <div class="invoice-card"><strong>Non conformes</strong><div class="meta" th:text="${nonCompliantCount}"></div></div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2>Raccourcis</h2>
+                        <div class="list">
+                            <a th:href="@{/workspace}" style="padding:10px 0">→ Analyser une facture</a>
+                            <a th:href="@{/invoices}" style="padding:10px 0">→ Registre des factures</a>
+                            <a th:href="@{/studio}" style="padding:10px 0">→ Studio PDF</a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    const PALETTE = { indigo: '#4f46e5', emerald: '#059669', amber: '#f59e0b', sky: '#0ea5e9', rose: '#e11d48', slate: '#94a3b8' };
+    const months = /*[[${months}]]*/ [];
+    const labels = months;
+
+    new Chart(document.getElementById('chartTva'), {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [
+                { label: 'TVA 20 %', data: /*[[${monthlyTva20}]]*/ [], backgroundColor: PALETTE.indigo, stack: 'tva' },
+                { label: 'TVA 10 %', data: /*[[${monthlyTva10}]]*/ [], backgroundColor: PALETTE.sky, stack: 'tva' },
+                { label: 'Autres taux', data: /*[[${monthlyVatOther}]]*/ [], backgroundColor: PALETTE.amber, stack: 'tva' },
+                { label: 'Timbre', data: /*[[${monthlyTimbre}]]*/ [], backgroundColor: PALETTE.emerald, stack: 'tva' }
+            ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true } } }
+    });
+
+    new Chart(document.getElementById('chartConformite'), {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [{ label: 'Conformité %', data: /*[[${monthlyComplianceRate}]]*/ [], borderColor: PALETTE.emerald, backgroundColor: 'rgba(5,150,105,.15)', fill: true, tension: .35 }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+    });
+
+    const payMap = /*[[${paymentBreakdown}]]*/ {};
+    const PAY_LABELS = { CASH: 'Espèces', TRANSFER: 'Virement', CHEQUE: 'Chèque', BILL_OF_EXCHANGE: 'Effet', OTHER: 'Autre' };
+    new Chart(document.getElementById('chartReglements'), {
+        type: 'bar',
+        data: {
+            labels: Object.keys(payMap).map(k => PAY_LABELS[k] || k),
+            datasets: [{ label: 'Total TTC (MAD)', data: Object.values(payMap), backgroundColor: PALETTE.indigo, borderRadius: 6 }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => (v / 1000).toFixed(0) + 'k' } } } }
+    });
+
+    const topErrors = /*[[${topErrors}]]*/ [];
+    new Chart(document.getElementById('chartAnomalies'), {
+        type: 'bar',
+        data: {
+            labels: topErrors.map(e => e.ruleCode),
+            datasets: [{ label: 'Occurrences', data: topErrors.map(e => e.count), backgroundColor: PALETTE.rose, borderRadius: 6 }]
+        },
+        options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
+    });
+</script>
 </body>
 </html>
-
-
