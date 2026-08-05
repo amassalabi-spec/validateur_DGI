@@ -151,8 +151,11 @@ public class InvoiceService {
         return b == null ? BigDecimal.ZERO.setScale(2) : b.setScale(2, BigDecimal.ROUND_HALF_UP);
     }
 
+    private static final int MAX_TEXT_LENGTH = 500;
+
     private String blank(String s) {
-        return s == null ? "" : s;
+        if (s == null) return "";
+        return s.length() <= MAX_TEXT_LENGTH ? s : s.substring(0, MAX_TEXT_LENGTH);
     }
 
     public record InvoiceUploadResult(InvoiceData invoiceDTO, AuditReport report, Long invoiceId) {}

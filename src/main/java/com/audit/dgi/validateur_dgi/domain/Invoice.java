@@ -60,7 +60,7 @@ public class Invoice {
     @Column(name = "payment_method", nullable = false)
     private PaymentMethod paymentMethod;
 
-    @Column(name = "issuer_name", nullable = false)
+    @Column(name = "issuer_name", nullable = false, length = 500)
     private String issuerName;
 
     @Column(name = "issuer_address", nullable = false, length = 500)
@@ -81,7 +81,7 @@ public class Invoice {
     @Column(name = "issuer_cnss")
     private String issuerCnss;
 
-    @Column(name = "client_name", nullable = false)
+    @Column(name = "client_name", nullable = false, length = 500)
     private String clientName;
 
     @Column(name = "client_address", nullable = false, length = 500)
